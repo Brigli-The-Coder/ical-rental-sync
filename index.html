@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ical-rental-sync — by Brigli Bushati</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg:      #080c12;
+  --bg2:     #0e1420;
+  --bg3:     #141c2a;
+  --border:  rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.13);
+  --text:    #e8edf5;
+  --muted:   #6b7a96;
+  --accent:  #38bdf8;
+  --accent2: #818cf8;
+  --green:   #34d399;
+  --amber:   #fbbf24;
+  --red:     #f87171;
+  --mono:    'Space Mono', monospace;
+  --sans:    'Syne', sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 16px; line-height: 1.6; overflow-x: hidden; }
+
+/* NAV */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  padding: 0 24px; height: 56px;
+  display: flex; align-items: center; justify-content: space-between;
+  background: rgba(8,12,18,0.85); backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+}
+.nav-logo { font-family: var(--mono); font-size: 13px; color: var(--accent); text-decoration: none; }
+.nav-links { display: flex; gap: 24px; list-style: none; }
+.nav-links a { font-family: var(--sans); font-size: 13px; font-weight: 600; color: var(--muted); text-decoration: none; transition: color 0.2s; }
+.nav-links a:hover { color: var(--text); }
+@media (max-width: 560px) { .nav-links { display: none; } }
+
+/* HERO */
+#hero {
+  position: relative; min-height: 100vh;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 100px 24px 80px; text-align: center; overflow: hidden;
+}
+#hero-canvas { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; }
+.hero-inner { position: relative; z-index: 2; max-width: 680px; margin: 0 auto; }
+
+.pill {
+  display: inline-block; font-family: var(--mono); font-size: 11px;
+  color: var(--accent); background: rgba(56,189,248,0.1);
+  border: 1px solid rgba(56,189,248,0.25); padding: 5px 14px;
+  border-radius: 999px; margin-bottom: 28px; letter-spacing: 0.06em;
+  animation: fadeup 0.7s ease both;
+}
+h1 {
+  font-family: var(--sans); font-size: clamp(34px, 8vw, 70px);
+  font-weight: 800; line-height: 1.08; letter-spacing: -0.03em;
+  color: var(--text); margin-bottom: 20px;
+  animation: fadeup 0.7s 0.1s ease both;
+}
+h1 em { font-style: normal; color: var(--accent); }
+.hero-sub {
+  font-size: clamp(15px, 3vw, 18px); color: var(--muted);
+  max-width: 500px; margin: 0 auto 36px; font-weight: 400;
+  animation: fadeup 0.7s 0.2s ease both;
+}
+.hero-ctas {
+  display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
+  animation: fadeup 0.7s 0.3s ease both;
+}
+.btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--sans); font-size: 14px; font-weight: 700;
+  letter-spacing: 0.02em; padding: 12px 24px; border-radius: 10px;
+  text-decoration: none; cursor: pointer;
+  transition: transform 0.15s, opacity 0.15s; border: none;
+}
+.btn:hover { transform: translateY(-2px); opacity: 0.9; }
+.btn-a { background: var(--accent); color: #080c12; }
+.btn-b { background: transparent; color: var(--text); border: 1px solid var(--border2); }
+
+.install-strip {
+  margin-top: 40px;
+  display: inline-flex; align-items: center; gap: 12px;
+  background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: 12px; padding: 12px 20px;
+  font-family: var(--mono); font-size: 13px;
+  animation: fadeup 0.7s 0.4s ease both;
+  max-width: calc(100vw - 48px);
+}
+.install-strip .dollar { color: var(--muted); }
+.install-strip .cmd { color: var(--accent); }
+.copy-btn {
+  margin-left: auto; flex-shrink: 0; font-family: var(--mono); font-size: 11px;
+  color: var(--muted); background: var(--bg3); border: 1px solid var(--border);
+  padding: 4px 10px; border-radius: 6px; cursor: pointer;
+  transition: color 0.2s;
+}
+.copy-btn:hover { color: var(--text); }
+
+.scroll-hint {
+  position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%);
+  z-index: 2; animation: fadeup 0.7s 0.9s ease both;
+}
+.scroll-line { width: 1px; height: 44px; background: linear-gradient(to bottom, var(--accent), transparent); animation: pulse 2s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{opacity:.3} 50%{opacity:1} }
+
+/* SECTIONS */
+section { max-width: 860px; margin: 0 auto; padding: 80px 24px; }
+.section-tag { font-family: var(--mono); font-size: 11px; color: var(--accent); letter-spacing: 0.1em; margin-bottom: 12px; text-transform: uppercase; }
+h2 { font-family: var(--sans); font-size: clamp(24px, 5vw, 40px); font-weight: 800; letter-spacing: -0.02em; color: var(--text); margin-bottom: 16px; line-height: 1.15; }
+h2 em { font-style: normal; color: var(--accent); }
+.lead { font-size: 16px; color: var(--muted); max-width: 560px; margin-bottom: 48px; }
+
+/* FEATURES */
+.feat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+.feat-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 16px; padding: 24px;
+  transition: border-color 0.2s, transform 0.2s;
+}
+.feat-card:hover { border-color: var(--border2); transform: translateY(-3px); }
+.feat-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 14px; }
+.feat-card h3 { font-family: var(--sans); font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 7px; }
+.feat-card p { font-size: 13px; color: var(--muted); line-height: 1.55; }
+
+/* PLATFORMS */
+.platform-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+.platform-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 14px; padding: 18px;
+  display: flex; align-items: center; gap: 14px;
+  transition: border-color 0.2s;
+}
+.platform-card:hover { border-color: var(--border2); }
+.pdot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.platform-card span { font-size: 14px; font-weight: 600; color: var(--text); }
+.platform-card small { display: block; font-family: var(--mono); font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+/* CODE BLOCK */
+.code-wrap { border-radius: 14px; overflow: hidden; border: 1px solid var(--border); background: var(--bg2); }
+.code-tabs { display: flex; border-bottom: 1px solid var(--border); background: var(--bg3); overflow-x: auto; scrollbar-width: none; }
+.code-tabs::-webkit-scrollbar { display: none; }
+.ctab {
+  flex-shrink: 0; font-family: var(--mono); font-size: 11px; color: var(--muted);
+  background: transparent; border: none; border-bottom: 2px solid transparent;
+  padding: 12px 18px; cursor: pointer; letter-spacing: 0.04em;
+  transition: color 0.2s, border-color 0.2s;
+}
+.ctab.active { color: var(--accent); border-bottom-color: var(--accent); }
+pre {
+  padding: 24px; font-family: var(--mono); font-size: 13px;
+  line-height: 1.75; overflow-x: auto; color: var(--text);
+  scrollbar-width: thin; scrollbar-color: var(--border2) transparent;
+}
+.kw{color:#c084fc} .fn{color:#7dd3fc} .str{color:#86efac} .cm{color:#475569} .num{color:#fbbf24} .cls{color:#f9a8d4}
+.panel { display: none; }
+.panel.active { display: block; }
+
+/* STEPS */
+.steps { display: flex; flex-direction: column; }
+.step { display: grid; grid-template-columns: 48px 1fr; gap: 20px; padding-bottom: 40px; }
+.step-num-wrap { display: flex; flex-direction: column; align-items: center; }
+.step-num {
+  width: 40px; height: 40px; border-radius: 50%;
+  background: var(--bg3); border: 1px solid var(--border2);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--mono); font-size: 13px; font-weight: 700;
+  color: var(--accent); flex-shrink: 0; z-index: 1;
+}
+.step-line { width: 1px; flex: 1; background: var(--border); margin-top: 8px; }
+.step:last-child .step-line { display: none; }
+.step-body { padding-top: 8px; }
+.step-body h3 { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+.step-body p { font-size: 14px; color: var(--muted); line-height: 1.6; margin-bottom: 14px; }
+
+/* API TABLE */
+.api-table { width: 100%; border-collapse: collapse; font-size: 13px; border-radius: 14px; overflow: hidden; border: 1px solid var(--border); }
+.api-table thead { background: var(--bg3); }
+.api-table th { padding: 12px 16px; text-align: left; font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em; color: var(--muted); font-weight: 400; text-transform: uppercase; }
+.api-table td { padding: 13px 16px; border-top: 1px solid var(--border); vertical-align: top; }
+.api-table td:first-child { font-family: var(--mono); font-size: 12px; color: var(--accent); }
+.api-table td:nth-child(2) { font-family: var(--mono); font-size: 11px; color: var(--accent2); white-space: nowrap; }
+.api-table td:nth-child(3) { font-size: 13px; color: var(--muted); }
+@media (max-width: 600px) {
+  .api-table thead { display: none; }
+  .api-table, .api-table tbody, .api-table tr, .api-table td { display: block; width: 100%; }
+  .api-table tr { padding: 14px 0; border-top: 1px solid var(--border); }
+  .api-table td { border: none; padding: 3px 16px; }
+}
+
+/* BADGES */
+.badge-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 24px; }
+.badge { font-family: var(--mono); font-size: 11px; padding: 4px 10px; border-radius: 6px; }
+.bg { background: rgba(52,211,153,0.12); color: var(--green); border: 1px solid rgba(52,211,153,0.25); }
+.bb { background: rgba(56,189,248,0.10); color: var(--accent); border: 1px solid rgba(56,189,248,0.2); }
+.bp { background: rgba(129,140,248,0.10); color: var(--accent2); border: 1px solid rgba(129,140,248,0.2); }
+
+/* AUTHOR */
+.author-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 20px; padding: 32px;
+  display: flex; align-items: center; gap: 28px; flex-wrap: wrap;
+}
+.author-avatar {
+  width: 72px; height: 72px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--sans); font-size: 26px; font-weight: 800;
+  color: #080c12; flex-shrink: 0;
+}
+.author-info h3 { font-size: 20px; font-weight: 800; color: var(--text); margin-bottom: 4px; }
+.author-info p { font-size: 14px; color: var(--muted); margin-bottom: 14px; }
+.author-links { display: flex; gap: 10px; flex-wrap: wrap; }
+.author-links a {
+  font-family: var(--mono); font-size: 12px; color: var(--accent);
+  text-decoration: none; background: rgba(56,189,248,0.08);
+  border: 1px solid rgba(56,189,248,0.2); padding: 5px 12px;
+  border-radius: 8px; transition: background 0.15s;
+}
+.author-links a:hover { background: rgba(56,189,248,0.16); }
+
+/* DIVIDER */
+.divider { height: 1px; background: var(--border); max-width: 860px; margin: 0 auto; }
+
+/* FOOTER */
+footer { border-top: 1px solid var(--border); padding: 32px 24px; text-align: center; font-family: var(--mono); font-size: 12px; color: var(--muted); }
+footer span { color: var(--accent); }
+
+/* ANIMATIONS */
+@keyframes fadeup { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:none} }
+.reveal { opacity: 0; transform: translateY(24px); transition: opacity 0.6s ease, transform 0.6s ease; }
+.reveal.visible { opacity: 1; transform: none; }
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="#" class="nav-logo">ical-rental-sync</a>
+  <ul class="nav-links">
+    <li><a href="#features">Features</a></li>
+    <li><a href="#usage">Usage</a></li>
+    <li><a href="#api">API</a></li>
+    <li><a href="#author">Author</a></li>
+  </ul>
+</nav>
+
+<!-- HERO -->
+<section id="hero" style="max-width:none;padding-top:0;padding-bottom:0;">
+  <canvas id="hero-canvas"></canvas>
+  <div class="hero-inner">
+    <div class="pill">v0.1.0 — now on PyPI</div>
+    <h1>Sync rental calendars<br>in <em>5 lines</em> of code</h1>
+    <p class="hero-sub">Connect Airbnb, Booking.com, VRBO and any iCal feed into one unified Python API. Built-in caching, Celery-ready, fully typed.</p>
+    <div class="hero-ctas">
+      <a href="#usage" class="btn btn-a">Get started</a>
+      <a href="https://github.com/brigli-the-coder" class="btn btn-b" target="_blank">GitHub ↗</a>
+    </div>
+    <div class="install-strip">
+      <span class="dollar">$</span>
+      <span class="cmd">pip install ical-rental-sync</span>
+      <button class="copy-btn" onclick="doCopy(this,'pip install ical-rental-sync')">copy</button>
+    </div>
+  </div>
+  <div class="scroll-hint"><div class="scroll-line"></div></div>
+</section>
+
+<!-- FEATURES -->
+<section id="features">
+  <div class="reveal">
+    <div class="section-tag">// features</div>
+    <h2>Everything you need.<br><em>Nothing you don't.</em></h2>
+    <p class="lead">Stop writing the same 80 lines of iCal boilerplate for every project.</p>
+  </div>
+  <div class="feat-grid reveal">
+    <div class="feat-card">
+      <div class="feat-icon" style="background:rgba(56,189,248,0.12)">
+        <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7" stroke="#38bdf8" stroke-width="1.5"/><path d="M10 6v4l3 2" stroke="#38bdf8" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </div>
+      <h3>Multi-platform</h3>
+      <p>Airbnb, Booking.com, VRBO, Google Calendar — any valid .ics URL. You choose what to connect.</p>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon" style="background:rgba(52,211,153,0.12)">
+        <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M4 10h12M10 4v12" stroke="#34d399" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </div>
+      <h3>Built-in caching</h3>
+      <p>Configurable TTL stops you hammering external APIs on every request. Cache once, serve many.</p>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon" style="background:rgba(129,140,248,0.12)">
+        <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><rect x="3" y="5" width="14" height="11" rx="2" stroke="#818cf8" stroke-width="1.5"/><path d="M7 5V4a3 3 0 016 0v1" stroke="#818cf8" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </div>
+      <h3>Secure by design</h3>
+      <p>Zero exec(), eval(), or os.system(). URL validation blocks unsafe schemes before any request.</p>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon" style="background:rgba(251,191,36,0.12)">
+        <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M10 3l2 5h5l-4 3 1.5 5L10 13l-4.5 3L7 11 3 8h5z" fill="#fbbf24" opacity=".3" stroke="#fbbf24" stroke-width="1.2"/></svg>
+      </div>
+      <h3>Django-ready</h3>
+      <p>Drop into any view or Celery task. Initialise once at module level, cache handles the rest.</p>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon" style="background:rgba(248,113,113,0.12)">
+        <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M5 10l4 4 6-7" stroke="#f87171" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <h3>Fully typed</h3>
+      <p>100% type hints on every method. Full IDE autocomplete — no guessing what a method returns.</p>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon" style="background:rgba(56,189,248,0.08)">
+        <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7" stroke="#38bdf8" stroke-width="1.5"/><path d="M10 7v4M10 13.5v.5" stroke="#38bdf8" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </div>
+      <h3>Resilient</h3>
+      <p>Broken feeds and timeouts are caught gracefully. Your app never crashes because one feed is down.</p>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- PLATFORMS -->
+<section>
+  <div class="reveal">
+    <div class="section-tag">// compatible with</div>
+    <h2>Connect <em>one platform</em><br>or ten — your choice.</h2>
+    <p class="lead">The label is just a name you give. The library reads any valid .ics URL and merges everything automatically.</p>
+  </div>
+  <div class="platform-grid reveal">
+    <div class="platform-card"><div class="pdot" style="background:#ff5a5f"></div><div><span>Airbnb</span><small>Manage Listing → Export Calendar</small></div></div>
+    <div class="platform-card"><div class="pdot" style="background:#003580"></div><div><span>Booking.com</span><small>Calendar → Sync → iCal Link</small></div></div>
+    <div class="platform-card"><div class="pdot" style="background:#1c5bd4"></div><div><span>VRBO</span><small>Dashboard → Calendars → Export</small></div></div>
+    <div class="platform-card"><div class="pdot" style="background:#4285f4"></div><div><span>Google Calendar</span><small>Settings → Secret iCal address</small></div></div>
+    <div class="platform-card"><div class="pdot" style="background:#34d399"></div><div><span>Any .ics feed</span><small>Custom or private calendars</small></div></div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- USAGE -->
+<section id="usage">
+  <div class="reveal">
+    <div class="section-tag">// usage</div>
+    <h2>From install to<br>production in <em>minutes.</em></h2>
+  </div>
+
+  <div class="reveal" style="margin-bottom:48px;">
+    <div class="code-wrap">
+      <div class="code-tabs">
+        <button class="ctab active" onclick="switchTab('basic',this)">basic usage</button>
+        <button class="ctab" onclick="switchTab('django',this)">django view</button>
+        <button class="ctab" onclick="switchTab('celery',this)">celery task</button>
+        <button class="ctab" onclick="switchTab('options',this)">connect options</button>
+      </div>
+      <div class="panel active" id="p-basic"><pre><span class="kw">from</span> ical_rental_sync <span class="kw">import</span> <span class="cls">CalendarSync</span>
+
+sync = <span class="cls">CalendarSync</span>(
+    urls={
+        <span class="str">"airbnb"</span>:  <span class="str">"https://www.airbnb.com/calendar/ical/YOUR_ID.ics"</span>,
+        <span class="str">"booking"</span>: <span class="str">"https://ical.booking.com/v1/export?t=TOKEN"</span>,
+    },
+    cache_ttl=<span class="num">120</span>,  <span class="cm"># cache 2 minutes</span>
+)
+
+<span class="cm"># Check if a date range is free</span>
+<span class="kw">if</span> sync.<span class="fn">is_available</span>(<span class="str">"2026-06-01"</span>, <span class="str">"2026-06-07"</span>):
+    <span class="fn">print</span>(<span class="str">"Dates are free!"</span>)
+
+<span class="cm"># All booked dates as a flat list</span>
+booked = sync.<span class="fn">get_booked_dates</span>()
+<span class="cm"># → [date(2026, 6, 1), date(2026, 6, 2), ...]</span></pre></div>
+      <div class="panel" id="p-django"><pre><span class="kw">from</span> ical_rental_sync <span class="kw">import</span> <span class="cls">CalendarSync</span>
+<span class="kw">from</span> django.http <span class="kw">import</span> JsonResponse
+
+<span class="cm"># Initialise once — cache handles the rest</span>
+SYNC = <span class="cls">CalendarSync</span>(
+    urls={<span class="str">"airbnb"</span>: <span class="str">"https://..."</span>, <span class="str">"booking"</span>: <span class="str">"https://..."</span>},
+    cache_ttl=<span class="num">120</span>,
+)
+
+<span class="kw">def</span> <span class="fn">check_availability</span>(request):
+    check_in  = request.GET.<span class="fn">get</span>(<span class="str">"check_in"</span>)
+    check_out = request.GET.<span class="fn">get</span>(<span class="str">"check_out"</span>)
+    available = SYNC.<span class="fn">is_available</span>(check_in, check_out)
+    <span class="kw">return</span> <span class="fn">JsonResponse</span>({<span class="str">"available"</span>: available})
+
+<span class="kw">def</span> <span class="fn">booked_dates</span>(request):
+    booked = SYNC.<span class="fn">get_booked_dates</span>()
+    <span class="kw">return</span> <span class="fn">JsonResponse</span>({
+        <span class="str">"booked_dates"</span>: [d.<span class="fn">isoformat</span>() <span class="kw">for</span> d <span class="kw">in</span> booked]
+    })</pre></div>
+      <div class="panel" id="p-celery"><pre><span class="kw">from</span> celery <span class="kw">import</span> shared_task
+<span class="kw">from</span> myapp.views <span class="kw">import</span> SYNC
+
+@shared_task
+<span class="kw">def</span> <span class="fn">refresh_calendars</span>():
+    <span class="cm"># Pre-warm cache every 5 minutes</span>
+    SYNC.<span class="fn">clear_cache</span>()
+    SYNC.<span class="fn">get_combined_availability</span>()
+
+<span class="cm"># settings.py</span>
+CELERY_BEAT_SCHEDULE = {
+    <span class="str">"refresh-rental-calendars"</span>: {
+        <span class="str">"task"</span>: <span class="str">"myapp.tasks.refresh_calendars"</span>,
+        <span class="str">"schedule"</span>: <span class="num">300</span>,
+    }
+}</pre></div>
+      <div class="panel" id="p-options"><pre><span class="cm"># Option A — only Airbnb</span>
+sync = <span class="cls">CalendarSync</span>(urls={<span class="str">"airbnb"</span>: <span class="str">"https://..."</span>})
+
+<span class="cm"># Option B — only Booking.com</span>
+sync = <span class="cls">CalendarSync</span>(urls={<span class="str">"booking"</span>: <span class="str">"https://..."</span>})
+
+<span class="cm"># Option C — both (most common)</span>
+sync = <span class="cls">CalendarSync</span>(urls={
+    <span class="str">"airbnb"</span>:  <span class="str">"https://..."</span>,
+    <span class="str">"booking"</span>: <span class="str">"https://..."</span>,
+})
+
+<span class="cm"># Option D — everything</span>
+sync = <span class="cls">CalendarSync</span>(urls={
+    <span class="str">"airbnb"</span>:     <span class="str">"https://airbnb..."</span>,
+    <span class="str">"booking"</span>:    <span class="str">"https://booking..."</span>,
+    <span class="str">"vrbo"</span>:       <span class="str">"https://vrbo..."</span>,
+    <span class="str">"google_cal"</span>: <span class="str">"https://calendar.google..."</span>,
+    <span class="str">"my_website"</span>: <span class="str">"https://mysite/calendar.ics"</span>,
+})
+<span class="cm"># Label = just a name you choose.</span>
+<span class="cm"># is_available() checks ALL platforms at once.</span></pre></div>
+    </div>
+  </div>
+
+  <div class="reveal">
+    <div class="section-tag" style="margin-top:48px;">// how it works</div>
+    <h2 style="margin-bottom:36px;">Three steps.<br><em>Done.</em></h2>
+  </div>
+  <div class="steps reveal">
+    <div class="step">
+      <div class="step-num-wrap"><div class="step-num">01</div><div class="step-line"></div></div>
+      <div class="step-body">
+        <h3>Install and import</h3>
+        <p>One pip install. One import. No config files needed beyond your iCal URLs.</p>
+        <div class="code-wrap" style="max-width:360px;"><pre style="padding:14px 18px;">pip install ical-rental-sync</pre></div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num-wrap"><div class="step-num">02</div><div class="step-line"></div></div>
+      <div class="step-body">
+        <h3>Paste your iCal URLs</h3>
+        <p>Grab the export link from each platform. Airbnb, Booking.com, and VRBO all have them in their calendar settings. Paste them as a dict.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num-wrap"><div class="step-num">03</div><div class="step-line"></div></div>
+      <div class="step-body">
+        <h3>Call is_available() and ship</h3>
+        <p>Returns True or False. Plug it into your Django view, Celery task, or any Python backend. Fetching, parsing, merging and caching are all handled.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- API -->
+<section id="api">
+  <div class="reveal">
+    <div class="section-tag">// api reference</div>
+    <h2>Clean API.<br><em>Fully typed.</em></h2>
+    <p class="lead">Every method has type hints and docstrings. Your IDE knows everything before you do.</p>
+  </div>
+  <div class="reveal" style="overflow-x:auto;">
+    <table class="api-table">
+      <thead><tr><th>Method</th><th>Returns</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>is_available(check_in, check_out)</td><td>bool</td><td>True if no platform has a booking overlapping the range</td></tr>
+        <tr><td>get_combined_availability()</td><td>list[BookedPeriod]</td><td>All blocked periods from all platforms, merged and sorted</td></tr>
+        <tr><td>get_booked_dates()</td><td>list[date]</td><td>Flat list of every individual booked date — great for calendar widgets</td></tr>
+        <tr><td>clear_cache()</td><td>None</td><td>Invalidate all cached data — next call fetches fresh</td></tr>
+        <tr><td>add_url(label, url)</td><td>None</td><td>Add a new iCal feed at runtime without reinstantiation</td></tr>
+        <tr><td>remove_url(label)</td><td>None</td><td>Remove a feed by its label</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="badge-row reveal">
+    <span class="badge bg">MIT License</span>
+    <span class="badge bb">Python 3.9+</span>
+    <span class="badge bp">Django compatible</span>
+    <span class="badge bg">Celery compatible</span>
+    <span class="badge bb">100% type hints</span>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- AUTHOR -->
+<section id="author">
+  <div class="reveal">
+    <div class="section-tag">// author</div>
+    <h2>Built in <em>Shkodër.</em><br>Used worldwide.</h2>
+  </div>
+  <div class="author-card reveal">
+    <div class="author-avatar">BB</div>
+    <div class="author-info">
+      <h3>Brigli Bushati</h3>
+      <p>Developer from Shkodër, Albania. Building open-source Python tools that solve real problems for rental businesses — and publishing them for the world to use.</p>
+      <div class="author-links">
+        <a href="https://brigli-the-coder.github.io/brigli/" target="_blank">Website ↗</a>
+        <a href="https://github.com/brigli-the-coder" target="_blank">GitHub ↗</a>
+        <a href="https://pypi.org/user/brigli/" target="_blank">PyPI ↗</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>ical-rental-sync &nbsp;·&nbsp; MIT License &nbsp;·&nbsp; Made with care by <span>Brigli Bushati</span> — Shkodër, Albania</p>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* 3D HERO */
+const canvas = document.getElementById('hero-canvas');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 100);
+camera.position.set(0, 1.5, 6);
+camera.lookAt(0, 0, 0);
+
+const sp = new Float32Array(900 * 3);
+for (let i = 0; i < 900 * 3; i++) sp[i] = (Math.random() - 0.5) * 40;
+const sg = new THREE.BufferGeometry();
+sg.setAttribute('position', new THREE.BufferAttribute(sp, 3));
+scene.add(new THREE.Points(sg, new THREE.PointsMaterial({ color: 0x7dd3fc, size: 0.04, transparent: true, opacity: 0.55 })));
+
+const grid = new THREE.GridHelper(24, 32, 0x1e3a5f, 0x0d1f3c);
+grid.position.y = -2.4;
+scene.add(grid);
+
+const r1 = new THREE.Mesh(new THREE.TorusGeometry(2, 0.014, 8, 90), new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.28 }));
+r1.rotation.x = 1.1; scene.add(r1);
+const r2 = new THREE.Mesh(new THREE.TorusGeometry(3, 0.008, 8, 90), new THREE.MeshBasicMaterial({ color: 0x818cf8, transparent: true, opacity: 0.16 }));
+r2.rotation.x = 1.0; r2.rotation.z = 0.4; scene.add(r2);
+const r3 = new THREE.Mesh(new THREE.TorusGeometry(1.2, 0.01, 8, 60), new THREE.MeshBasicMaterial({ color: 0x34d399, transparent: true, opacity: 0.18 }));
+r3.rotation.x = 1.3; r3.rotation.y = 0.5; scene.add(r3);
+
+const dotColors = [0x38bdf8, 0x818cf8, 0x34d399, 0xfbbf24, 0xf87171];
+const dots = dotColors.map((c, i) => {
+  const d = new THREE.Mesh(new THREE.SphereGeometry(0.06, 12, 12), new THREE.MeshBasicMaterial({ color: c }));
+  d.userData = { a: (i / 5) * Math.PI * 2, r: i % 2 === 0 ? 2 : 3 };
+  scene.add(d); return d;
+});
+
+function resize() {
+  const h = canvas.parentElement;
+  const w = h.offsetWidth, ht = h.offsetHeight;
+  renderer.setSize(w, ht, false);
+  camera.aspect = w / ht;
+  camera.updateProjectionMatrix();
+}
+resize();
+window.addEventListener('resize', resize);
+
+let t = 0;
+(function animate() {
+  requestAnimationFrame(animate);
+  t += 0.004;
+  r1.rotation.z = t * 0.25;
+  r2.rotation.z = -t * 0.15;
+  r3.rotation.y = t * 0.3;
+  grid.position.z = (t * 0.3) % 0.75;
+  dots.forEach((d, i) => {
+    const a = d.userData.a + t * (i % 2 === 0 ? 0.45 : -0.3);
+    const r = d.userData.r;
+    d.position.set(Math.cos(a) * r, Math.sin(a) * 0.4, Math.sin(a) * r * 0.35);
+  });
+  renderer.render(scene, camera);
+})();
+
+/* TABS */
+function switchTab(id, el) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.ctab').forEach(t => t.classList.remove('active'));
+  document.getElementById('p-' + id).classList.add('active');
+  el.classList.add('active');
+}
+
+/* COPY */
+function doCopy(btn, text) {
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = 'copied!';
+    setTimeout(() => btn.textContent = 'copy', 2000);
+  });
+}
+
+/* SCROLL REVEAL */
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.08 });
+document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+</script>
+</body>
+</html>
